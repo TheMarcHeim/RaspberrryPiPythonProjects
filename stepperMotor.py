@@ -133,3 +133,7 @@ def setStep(w1, w2, w3, w4):
   GPIO.output(coil3, w3)
   GPIO.output(coil4, w4)
 
+try:
+    run()
+except KeyboardInterruption:
+    stop()
