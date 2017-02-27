@@ -38,8 +38,8 @@ size = 10
 for x in range (0,100):
 	t = x/100.
 	x = centerX+ size*4*m.sin(t)*m.sin(t)*m.sin(t)
-	y = centerY+ size(3*m.cos(t)-1.3*m.cos(2*t)-0.6*m.cos(3*t)-0.2*cos(4*t)
-	draw.point((x,y), fill=0)
+	y = centerY+ size*(3*m.cos(t)-1.3*m.cos(2*t)-0.6*m.cos(3*t)-0.2*m.cos(4*t)
+	draw.point((int(x),int(y)), fill=0)
 
 disp.image(image)
 disp.display()
