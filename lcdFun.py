@@ -7,7 +7,7 @@ import Image
 import ImageDraw
 import ImageFont
 
-import Math as m
+import math as m
 
 DC = 23
 RST = 24
@@ -28,18 +28,28 @@ draw = ImageDraw.Draw(image)
 
 draw.rectangle((0,0,LCD.LCDWIDTH,LCD.LCDHEIGHT), outline=255, fill=255)
 
-draw.ellipse((2,2,22,22), outline=0, fill=255)
+#draw.ellipse((2,2,22,22), outline=0, fill=255)
 
-centerX = LCD.LCDWIDTH
-centerY = LCD.LCDHEIGTH
-size = 10
+centerX = LCD.LCDWIDTH/2
+centerY = LCD.LCDHEIGHT/2-7
+size = -5
+
+print (m.cos(1))
 
 #heart
-for x in range (0,100):
-	t = x/100.
-	x = centerX+ size*4*m.sin(t)*m.sin(t)*m.sin(t)
-	y = centerY+ size*(3*m.cos(t)-1.3*m.cos(2*t)-0.6*m.cos(3*t)-0.2*m.cos(4*t)
-	draw.point((int(x),int(y)), fill=0)
+for i in range (0,30):
+	t = 3.1415*i/30.0
+	x = size*4*m.sin(t)*m.sin(t)*m.sin(t)
+	y = centerY+ size*(3*m.cos(t)-1.3*m.cos(2*t)-0.6*m.cos(3*t)-0.2*m.cos(4*t))
+	if (i!=0):
+                draw.line((centerX+x,y,centerX+oldx,oldy), fill=0)
+                draw.line((centerX-x,y,centerX-oldx,oldy), fill=0)
+	oldx = x
+	oldy = y
+        #draw.rectangle(((int(x),int(y),int(x)+1,int(y)+1), outline=0, fill=0)
+
+font = ImageFont.load_default()
+draw.text((1,33), 'Ich liebe dech!', font=font)
 
 disp.image(image)
 disp.display()
