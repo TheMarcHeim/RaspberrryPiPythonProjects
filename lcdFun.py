@@ -39,22 +39,28 @@ def measureThread():
         gpio.setup(ECHO, gpio.IN)
         gpio.output(TRIG, False)
 	counter = 0
+	stop = 0
+	start = 0
         while (not stopped):
-                time.sleep(0.5)
-		print('PING!')
+                time.sleep(0.1)
                 gpio.output(TRIG, True)
-                time.sleep(0.5)
+                time.sleep(0.00001)
                 gpio.output(TRIG, False)
-                while gpio.input(ECHO and counter < 1000) == 0:
+
+		start = time.time()
+		begin = time.time()
+                while gpio.input(ECHO) == 0 and start-begin < 1:
                         start = time.time()
-			counter = counter + 1
-		counter = 0
-                while gpio.input(ECHO and counter < 1000) == 1:
+
+		stop = time.time()
+		begin = time.time()
+                while gpio.input(ECHO) == 1 and stop-begin < 1:
                         stop = time.time()
-			counter = counter + 1
-		counter = 0
+
                 elapsed = stop - start
+		print("PING: " +str(elapsed))
                 distance = round(elapsed*17000,2)
+		print("Dist: " +str(distance))
 
 
 def drawThread():
@@ -62,11 +68,12 @@ def drawThread():
         draw = ImageDraw.Draw(image)
         centerX = LCD.LCDWIDTH/2
         centerY = LCD.LCDHEIGHT/2-7
+        #font = ImageFont.load_default()
         size = -5
         while(not stopped):
                 draw.rectangle((0,0,LCD.LCDWIDTH,LCD.LCDHEIGHT), outline=255, fill=255)
 
-                #draw.ellipse((2,2,22,22), outline=0, fill=255)
+                draw.ellipse((2,2,22,22), outline=0, fill=255)
 
 
 
@@ -83,8 +90,8 @@ def drawThread():
                  #       oldy = y
                         #draw.rectangle(((int(x),int(y),int(x)+1,int(y)+1), outline=0, fill=0)
 
-                font = ImageFont.load_default()
-                draw.text((1,33), distance, font=font)
+
+                #draw.text((1,33), distance, font=font)
 
                 disp.image(image)
                 disp.display()
@@ -108,6 +115,6 @@ def stop():
 
 run()
 
-time.sleep(2)
+time.sleep(30)
 
 stop()
