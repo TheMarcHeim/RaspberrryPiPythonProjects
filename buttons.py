@@ -17,14 +17,19 @@ RELAYPINS = [2,4,3,22]
 DOORRELAY = 2
 
 lastCode = []
-correctCode = [3,3,3,3,3]
+correctCode = [0,1,2,3,4]
+
+newPassword = []
 
 currentInput = -1
+lastCurrentInput = 0
+
+blinkStopEvent = None
+pushAction = None
 
 open = False
 
 stopped = False
-oldState
 
 def init():
 	GPIO.setmode(GPIO.BCM)
@@ -60,6 +65,15 @@ def lightFire(leds):
         for led in leds:
             GPIO.output(led, GPIO.LOW)
         time.sleep(0.05)
+
+def slowLightFire(leds):
+    for x in range(0,2):
+        for led in leds:
+            GPIO.output(led, GPIO.HIGH)
+        time.sleep(2)
+        for led in leds:
+            GPIO.output(led, GPIO.LOW)
+        time.sleep(1)
         
 def lightRun(leds):
     for led in leds:
@@ -69,10 +83,12 @@ def lightRun(leds):
 def successRelay():
 	global open
 	GPIO.output(DOORRELAY, GPIO.LOW)
+	print("OPEN THE DOOR!")
 	open = True
-	time.sleep(2)
+	time.sleep(5)
 	GPIO.output(DOORRELAY, GPIO.HIGH)
 	open = False
+	print("CLOSING AGAIN!")
 
 def relayDemo():
 	for relay in RELAYPINS:
@@ -83,9 +99,8 @@ def relayDemo():
 	for relay in RELAYPINS:
 		time.sleep(1)
 		GPIO.output(relay, GPIO.HIGH)
-	
 
-def buttonThread(pushAction):
+def buttonThread():
 	global oldState, lastCode
 	oldState = [False,False,False,False,False]
 	alreadyPushed = [False,False,False,False,False]
@@ -109,19 +124,18 @@ def buttonThread(pushAction):
 def normalPush(input):
 	#append input to lastCode and test code
 	global lastCode
-	Thread(target=inputActivationThread, args=(REDLEDS[input],)).start()
-	lastCode=lastCode[-4:]+[input]
-	print(lastCode)
+	if not open:
+		lastCode=lastCode[-4:]+[input]
+		if not lastCode[-5:]==correctCode:
+			Thread(target=inputActivationThread, args=(REDLEDS[input],)).start()
+		print(lastCode)
 	if lastCode[-5:]==correctCode and not open:
 		actSuccess()
 		lastCode = []
 
-def passwordInputMode(input):
-	print "password" #todo
-
 def actSuccess():
-	Thread(target=successRelay).start()#switch to successRelay() in deployment
-	Thread(target=ledDemo).start()
+	Thread(target=successRelay).start()
+	Thread(target=ledSucces).start()
 	
 
 def inputActivationThread(led):
@@ -130,6 +144,20 @@ def inputActivationThread(led):
         time.sleep(0.1)
 	GPIO.output(led, GPIO.LOW)
         time.sleep(0.1)
+
+def passwordDemo():
+	global open
+	open = True
+	time.sleep(1)
+	lightFire(GREENLEDS)
+	time.sleep(1)
+	for inp in correctCode:
+		GPIO.output(GREENLEDS[inp], GPIO.HIGH)
+        	time.sleep(1)
+		GPIO.output(GREENLEDS[inp], GPIO.LOW)
+        	time.sleep(0.5)
+	open = False
+	lightFire(REDLEDS)
 
 def ledDemo():
 	time.sleep(0.1)
@@ -143,12 +171,13 @@ def ledDemo():
 	lightRun(GREENLEDS)
        	lightFire(GREENLEDS)
 
+def ledSucces():
+	slowLightFire(REDLEDS)
 
         
 def passwordBlinking(stopEvent):
 	setLow(GREENLEDS)
 	while not stopEvent.is_set():
-		print("test")
 		setHigh(GREENLEDS)
 		#fastblinking
 		for i in range(1,5):
@@ -177,33 +206,60 @@ def passwordBlinking(stopEvent):
 			stopEvent.wait(0.1)	
 			if stopEvent.is_set():
 				break
-	print("finished")
+
+def passwordInputPush(input):
+	global newPassword, currentInput, lastCurrentInput
+	print "input: "+str(input)
+	newPassword = newPassword + [input]
+	currentInput = input
+	lastCurrentInput = time.time()
+	Thread(target=deactivateCurrentInputAsync).start()
+	if len(newPassword)==5:
+		#set new password
+		setPassword(newPassword)
+		endPasswordInput()
+
+def deactivateCurrentInputAsync():
+	global currentInput
+	time.sleep(1)
+	if time.time()-lastCurrentInput >= 1:
+		currentInput = -1
 	
 def startPasswordInput():
-	global currentInput
-	stopEvent = Event()
-	bt = Thread(target=passwordBlinking, args=(stopEvent,))
+	global blinkStopEvent, pushAction, newPassword
+	blinkStopEvent = Event()
+	newPassword = []
+	pushAction = passwordInputPush
+	bt = Thread(target=passwordBlinking, args = (blinkStopEvent,))
 	currentInput = -1
 	bt.start()
-	time.sleep(4)
-	currentInput = 1
-	time.sleep(2.3)
-	currentInput = 3
-	time.sleep(2.3)
-	stopEvent.set()
+
+def endPasswordInput():
+	global pushAction
+	blinkStopEvent.set()
+	pushAction = normalPush
+
+def setPassword(password):
+	global correctCode
+	correctCode = password
+	print("new password: "+str(correctCode))
+	Thread(target=passwordDemo).start()
+	
 
 def run():
+	global pushAction
 	init()
 	#start reading thread
 	global t1, t2, t3, stopped
 	stopped = 0
-	t1 = Thread(target=buttonThread, args = (normalPush,))
+	pushAction = normalPush
+	t1 = Thread(target=buttonThread)
 	t1.start()
 	print('started threads')
-	startPasswordInput()
 	#while True:
-		
-
+	#	x = raw_input('Command? ')
+	#	if x == "set password":
+	startPasswordInput()
 
 
 def stop():
