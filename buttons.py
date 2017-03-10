@@ -5,7 +5,7 @@ from threading import Thread
 BUTTON = 4
 
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(BUTTON, GPIO.IN, GPIO.PUD_UP)
+
 
 #REDLEDS = [21,26,19,6]
 #GREENLEDS = [20,16,13,5]
@@ -15,10 +15,13 @@ REDLEDS = [16,19,5,21,25]
 PULLDOWNPINS = [17,18,27,23,24]
 oldState = [False,False,False,False,False]
 
+RELAYPINS = [2,4,3,22]
+DOORRELAY = 2
+
 lastCode = []
 correctCode = [0,1,2,3,4]
 
-success = False
+success = True
 stopped = False
 oldState
 
@@ -48,6 +51,31 @@ def testCode():
     if lastCode[-5:]==correctCode:
 	success = True
 
+def relayThread():
+	global success
+	for relay in RELAYPINS:
+		GPIO.setup(relay, GPIO.OUT)
+		GPIO.output(relay, GPIO.LOW)
+	while not stopped:
+		while not success and not stopped:
+			time.sleep(0.1)
+		success = False
+		relayDemo()
+
+def successRelay():
+	GPIO.output(DOORRELAY, GPIO.HIGH)
+
+def relayDemo():
+	for relay in RELAYPINS:
+		time.sleep(1)
+		GPIO.output(relay, GPIO.HIGH)
+	blinkTrough(RELAYPINS)
+	lightFire(RELAYPINS)
+	for relay in RELAYPINS:
+		time.sleep(1)
+		GPIO.output(relay, GPIO.HIGH)
+	
+
 def buttonThread():
     global oldState, success, lastCode
     for button in PULLDOWNPINS:
@@ -70,7 +98,6 @@ def buttonThread():
 	      #start blinkerthread
               bt = Thread(target=inputActivationThread, args=(REDLEDS[i],))
               bt.start()
-              print("PUSH:"+str(i))
               lastCode=lastCode[-4:]+[i]
               print(lastCode)
           oldState[i] = True
@@ -89,29 +116,31 @@ def ledThread():
     for led in REDLEDS+GREENLEDS:
         GPIO.setup(led, GPIO.OUT)
 	GPIO.output(led, GPIO.LOW)
-    while not success and not stopped:
-	time.sleep(0.1)
     while not stopped:
-        #sample program
-        #print("red")
-        blinkTrough(REDLEDS)
-        lightRun(REDLEDS)
-        lightFire(REDLEDS)
-        #print("green")
-        blinkTrough(GREENLEDS)
-        lightRun(GREENLEDS)
-        lightFire(GREENLEDS)
+	    while not success and not stopped:
+		time.sleep(0.1)
+	        #sample program
+	        #print("red")
+	        blinkTrough(REDLEDS)
+	        lightRun(REDLEDS)
+	        lightFire(REDLEDS)
+	        #print("green")
+	        blinkTrough(GREENLEDS)
+	        lightRun(GREENLEDS)
+        	lightFire(GREENLEDS)
         
 
 
 def run():
     #start reading thread
-    global t1, t2, stopped
+    global t1, t2, t3, stopped
     stopped = 0
     t1 = Thread(target=buttonThread)
     t2 = Thread(target=ledThread)
+    t3 = Thread(target=relayThread)
     t1.start()
     t2.start()
+    t3.start()
     print('started threads')
 
 
@@ -120,6 +149,7 @@ def stop():
     stopped = 1
     t1.join()
     t2.join()
+    t3.join()
     print('stopped threads')
     GPIO.cleanup()
 
