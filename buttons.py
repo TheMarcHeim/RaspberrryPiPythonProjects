@@ -1,6 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 from threading import Thread
+from threading import Event
 
 
 
@@ -17,6 +18,8 @@ DOORRELAY = 2
 
 lastCode = []
 correctCode = [3,3,3,3,3]
+
+currentInput = -1
 
 open = False
 
@@ -39,6 +42,14 @@ def blinkTrough(leds):
         GPIO.output(led, GPIO.HIGH)
         time.sleep(0.5)
         GPIO.output(led, GPIO.LOW)
+
+def setHigh(pins):
+	for pin in pins:
+		GPIO.output(pin, GPIO.HIGH)
+
+def setLow(pins):
+	for pin in pins:
+		GPIO.output(pin, GPIO.LOW)
     
 def lightFire(leds):
     time.sleep(0.1)
@@ -131,8 +142,55 @@ def ledDemo():
 	blinkTrough(GREENLEDS)
 	lightRun(GREENLEDS)
        	lightFire(GREENLEDS)
-        
 
+
+        
+def passwordBlinking(stopEvent):
+	setLow(GREENLEDS)
+	while not stopEvent.is_set():
+		print("test")
+		setHigh(GREENLEDS)
+		#fastblinking
+		for i in range(1,5):
+			inp = currentInput#-> has to be thread safe
+			if not inp == -1:
+				setHigh([GREENLEDS[inp]])
+			else:
+				setHigh(GREENLEDS)			
+			stopEvent.wait(0.1)
+			if not inp == -1:
+				setLow([GREENLEDS[inp]])			
+			stopEvent.wait(0.1)	
+			if stopEvent.is_set():
+				break
+		setLow(GREENLEDS)
+		#fastblinking
+		for i in range(1,5):
+			inp = currentInput
+			if not inp == -1:
+				setHigh([GREENLEDS[inp]])				
+			stopEvent.wait(0.1)
+			if not inp == -1:
+				setLow([GREENLEDS[inp]])
+			else:
+				setLow(GREENLEDS)			
+			stopEvent.wait(0.1)	
+			if stopEvent.is_set():
+				break
+	print("finished")
+	
+def startPasswordInput():
+	global currentInput
+	stopEvent = Event()
+	bt = Thread(target=passwordBlinking, args=(stopEvent,))
+	currentInput = -1
+	bt.start()
+	time.sleep(4)
+	currentInput = 1
+	time.sleep(2.3)
+	currentInput = 3
+	time.sleep(2.3)
+	stopEvent.set()
 
 def run():
 	init()
@@ -142,6 +200,7 @@ def run():
 	t1 = Thread(target=buttonThread, args = (normalPush,))
 	t1.start()
 	print('started threads')
+	startPasswordInput()
 	#while True:
 		
 
