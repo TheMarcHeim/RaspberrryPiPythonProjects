@@ -1,2 +1,2 @@
-nohup python ~/Documents/pythonProjects/RaspberrryPiPythonProjects/buttons.py > results.txt 2> errors.log &
+nohup python ~/Documents/pythonProjects/RaspberrryPiPythonProjects/buttons.py 2> /dev/null &
 

@@ -7,10 +7,15 @@ from threading import Event
 
 #REDLEDS = [21,26,19,6]
 #GREENLEDS = [20,16,13,5]
-GREENLEDS = [26,13,6,20,12]
-REDLEDS = [16,19,5,21,25]
+#GREENLEDS = [26,13,6,20,12]
+#REDLEDS = [16,19,5,21,25]
 
-PULLDOWNPINS = [17,18,27,23,24]
+GREENLEDS = [5,13,19,20,16]
+REDLEDS = [6,21,25,12,26]
+
+PASSWORTSETPIN = 10
+
+PULLDOWNPINS = [23,18,27,24,17]
 oldState = [False,False,False,False,False]
 
 RELAYPINS = [2,4,3,22]
@@ -38,6 +43,7 @@ def init():
 		GPIO.output(relay, GPIO.HIGH)
 	for button in PULLDOWNPINS:
         	GPIO.setup(button, GPIO.IN, GPIO.PUD_UP)
+	GPIO.setup(PASSWORTSETPIN, GPIO.IN, GPIO.PUD_UP)
 	for led in REDLEDS+GREENLEDS:
         	GPIO.setup(led, GPIO.OUT)
 		GPIO.output(led, GPIO.LOW)
@@ -67,13 +73,13 @@ def lightFire(leds):
         time.sleep(0.05)
 
 def slowLightFire(leds):
-    for x in range(0,2):
+    #for x in range(0,2):
         for led in leds:
             GPIO.output(led, GPIO.HIGH)
-        time.sleep(2)
+        time.sleep(5)
         for led in leds:
             GPIO.output(led, GPIO.LOW)
-        time.sleep(1)
+        #time.sleep(1)
         
 def lightRun(leds):
     for led in leds:
@@ -102,12 +108,10 @@ def relayDemo():
 
 def buttonThread():
 	global oldState, lastCode
-	oldState = [False,False,False,False,False]
-	alreadyPushed = [False,False,False,False,False]
+	oldState = [False,False,False,False,False,False]
 	while not stopped:
 		i = 0
-		for button in PULLDOWNPINS:
-			alreadyPushed[i] = alreadyPushed[i] or oldState[i]
+		for button in PULLDOWNPINS+[PASSWORTSETPIN]:
 			button_state = GPIO.input(button)
 			if button_state == GPIO.HIGH:
 				oldState[i] = False
@@ -124,14 +128,17 @@ def buttonThread():
 def normalPush(input):
 	#append input to lastCode and test code
 	global lastCode
-	if not open:
-		lastCode=lastCode[-4:]+[input]
-		if not lastCode[-5:]==correctCode:
-			Thread(target=inputActivationThread, args=(REDLEDS[input],)).start()
-		print(lastCode)
-	if lastCode[-5:]==correctCode and not open:
-		actSuccess()
-		lastCode = []
+	if input == 5:
+		startPasswordInput()
+	else:
+		if not open:
+			lastCode=lastCode[-4:]+[input]
+			#if not lastCode[-5:]==correctCode:
+				#Thread(target=inputActivationThread, args=(REDLEDS[input],)).start()
+			print(lastCode)
+		if lastCode[-5:]==correctCode and not open:
+			actSuccess()
+			lastCode = []
 
 def actSuccess():
 	Thread(target=successRelay).start()
@@ -209,15 +216,16 @@ def passwordBlinking(stopEvent):
 
 def passwordInputPush(input):
 	global newPassword, currentInput, lastCurrentInput
-	print "input: "+str(input)
-	newPassword = newPassword + [input]
-	currentInput = input
-	lastCurrentInput = time.time()
-	Thread(target=deactivateCurrentInputAsync).start()
-	if len(newPassword)==5:
-		#set new password
-		setPassword(newPassword)
-		endPasswordInput()
+	if input < 5:
+		print "input: "+str(input)
+		newPassword = newPassword + [input]
+		currentInput = input
+		lastCurrentInput = time.time()
+		Thread(target=deactivateCurrentInputAsync).start()
+		if len(newPassword)==5:
+			#set new password
+			setPassword(newPassword)
+			endPasswordInput()
 
 def deactivateCurrentInputAsync():
 	global currentInput
@@ -242,10 +250,21 @@ def endPasswordInput():
 def setPassword(password):
 	global correctCode
 	correctCode = password
+	#with open('passw.txt', 'w') as file:
+	#	for inp in correctCode:
+	#		file.write(str(inp)+"\n")
+
 	print("new password: "+str(correctCode))
 	Thread(target=passwordDemo).start()
-	
 
+def loadPassword():
+	global correctCode
+	correctCode = [0,1,2,3,4]
+	#WTF why does this not work?
+	#for line in open("passw.txt"):
+		#correctCode = correctCode+[int(line)]
+	#print "code: "+ str(correctCode)
+	
 def run():
 	global pushAction
 	init()
@@ -259,7 +278,8 @@ def run():
 	#while True:
 	#	x = raw_input('Command? ')
 	#	if x == "set password":
-	startPasswordInput()
+	#startPasswordInput()
+	loadPassword()
 
 
 def stop():
