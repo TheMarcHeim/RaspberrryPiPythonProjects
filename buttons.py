@@ -14,6 +14,7 @@ GREENLEDS = [5,13,19,20,16]
 REDLEDS = [6,21,25,12,26]
 
 PASSWORTSETPIN = 10
+DOOROPENPIN = 9
 
 PULLDOWNPINS = [23,18,27,24,17]
 oldState = [False,False,False,False,False]
@@ -44,6 +45,7 @@ def init():
 	for button in PULLDOWNPINS:
         	GPIO.setup(button, GPIO.IN, GPIO.PUD_UP)
 	GPIO.setup(PASSWORTSETPIN, GPIO.IN, GPIO.PUD_UP)
+	GPIO.setup(DOOROPENPIN, GPIO.IN, GPIO.PUD_UP)
 	for led in REDLEDS+GREENLEDS:
         	GPIO.setup(led, GPIO.OUT)
 		GPIO.output(led, GPIO.LOW)
@@ -111,7 +113,7 @@ def buttonThread():
 	oldState = [False,False,False,False,False,False]
 	while not stopped:
 		i = 0
-		for button in PULLDOWNPINS+[PASSWORTSETPIN]:
+		for button in PULLDOWNPINS+[PASSWORTSETPIN+DOOROPENPIN]:
 			button_state = GPIO.input(button)
 			if button_state == GPIO.HIGH:
 				oldState[i] = False
@@ -130,6 +132,9 @@ def normalPush(input):
 	global lastCode
 	if input == 5:
 		startPasswordInput()
+		print "passwordinput"
+	elif input == 6:
+		actSuccess()
 	else:
 		if not open:
 			lastCode=lastCode[-4:]+[input]
