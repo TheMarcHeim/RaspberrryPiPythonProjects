@@ -15,9 +15,13 @@ REDLEDS = [6,21,25,12,26]
 
 PASSWORTSETPIN = 10
 DOOROPENPIN = 9
+OPENLED = 11
+
+OPENLEDLIGHTTIME = 300
+
 
 PULLDOWNPINS = [23,18,27,24,17]
-oldState = [False,False,False,False,False]
+#oldState = [False,False,False,False,False]
 
 RELAYPINS = [2,4,3,22]
 DOORRELAY = 2
@@ -29,6 +33,8 @@ newPassword = []
 
 currentInput = -1
 lastCurrentInput = 0
+
+lastInputTime = 0
 
 blinkStopEvent = None
 pushAction = None
@@ -46,7 +52,7 @@ def init():
         	GPIO.setup(button, GPIO.IN, GPIO.PUD_UP)
 	GPIO.setup(PASSWORTSETPIN, GPIO.IN, GPIO.PUD_UP)
 	GPIO.setup(DOOROPENPIN, GPIO.IN, GPIO.PUD_UP)
-	for led in REDLEDS+GREENLEDS:
+	for led in REDLEDS+GREENLEDS+[OPENLED]:
         	GPIO.setup(led, GPIO.OUT)
 		GPIO.output(led, GPIO.LOW)
 
@@ -110,10 +116,10 @@ def relayDemo():
 
 def buttonThread():
 	global oldState, lastCode
-	oldState = [False,False,False,False,False,False]
+	oldState = [False,False,False,False,False,False,False]
 	while not stopped:
 		i = 0
-		for button in PULLDOWNPINS+[PASSWORTSETPIN+DOOROPENPIN]:
+		for button in PULLDOWNPINS+[PASSWORTSETPIN]+[DOOROPENPIN]:
 			button_state = GPIO.input(button)
 			if button_state == GPIO.HIGH:
 				oldState[i] = False
@@ -125,11 +131,15 @@ def buttonThread():
 				oldState[i] = True
 				time.sleep(0.2)
 			i=i+1
+		setOpenLed()
 
 
 def normalPush(input):
 	#append input to lastCode and test code
-	global lastCode
+
+	global lastCode, lastInputTime
+	GPIO.output(OPENLED, GPIO.HIGH)
+	lastInputTime = time.time()
 	if input == 5:
 		startPasswordInput()
 		print "passwordinput"
@@ -186,6 +196,8 @@ def ledDemo():
 def ledSucces():
 	slowLightFire(REDLEDS)
 
+
+
         
 def passwordBlinking(stopEvent):
 	setLow(GREENLEDS)
@@ -220,7 +232,8 @@ def passwordBlinking(stopEvent):
 				break
 
 def passwordInputPush(input):
-	global newPassword, currentInput, lastCurrentInput
+	global newPassword, currentInput, lastCurrentInput, lastInputTime
+	lastInputTime = time.time()
 	if input < 5:
 		print "input: "+str(input)
 		newPassword = newPassword + [input]
@@ -270,6 +283,12 @@ def loadPassword():
 		#correctCode = correctCode+[int(line)]
 	#print "code: "+ str(correctCode)
 	
+def setOpenLed():
+	if time.time()-lastInputTime >= OPENLEDLIGHTTIME:
+		GPIO.output(OPENLED, GPIO.LOW)
+	else:
+		GPIO.output(OPENLED, GPIO.HIGH)
+
 def run():
 	global pushAction
 	init()
@@ -280,6 +299,7 @@ def run():
 	t1 = Thread(target=buttonThread)
 	t1.start()
 	print('started threads')
+	lastInputTime = time.time()
 	#while True:
 	#	x = raw_input('Command? ')
 	#	if x == "set password":
