@@ -290,7 +290,7 @@ def setOpenLed():
 		GPIO.output(OPENLED, GPIO.HIGH)
 
 def run():
-	global pushAction
+	global pushAction, lastInputTime
 	init()
 	#start reading thread
 	global t1, t2, t3, stopped
