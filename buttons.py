@@ -2,7 +2,8 @@ import RPi.GPIO as GPIO
 import time
 from threading import Thread
 from threading import Event
-
+import os
+from random import randint
 
 
 #REDLEDS = [21,26,19,6]
@@ -16,6 +17,9 @@ REDLEDS = [6,21,25,12,26]
 PASSWORTSETPIN = 10
 DOOROPENPIN = 9
 OPENLED = 11
+
+NOPASSSOUNDS = 4
+PASSSOUNDS = 3
 
 OPENLEDLIGHTTIME = 300
 
@@ -38,6 +42,10 @@ lastInputTime = 0
 
 blinkStopEvent = None
 pushAction = None
+
+tries = 0
+
+playing = False
 
 open = False
 
@@ -136,6 +144,12 @@ def buttonThread():
 
 def normalPush(input):
 	#append input to lastCode and test code
+	global tries
+	tries = tries + 1
+	print tries
+	if tries == 10:
+		playsound("nopass"+str(randint(1,NOPASSSOUNDS)))
+		tries = 0
 
 	global lastCode, lastInputTime
 	GPIO.output(OPENLED, GPIO.HIGH)
@@ -156,8 +170,11 @@ def normalPush(input):
 			lastCode = []
 
 def actSuccess():
+	global tries
+	tries = 0
 	Thread(target=successRelay).start()
 	Thread(target=ledSucces).start()
+	playsound("pass"+str(randint(1,PASSSOUNDS)))
 	
 
 def inputActivationThread(led):
@@ -195,9 +212,6 @@ def ledDemo():
 
 def ledSucces():
 	slowLightFire(REDLEDS)
-
-
-
         
 def passwordBlinking(stopEvent):
 	setLow(GREENLEDS)
@@ -259,6 +273,18 @@ def startPasswordInput():
 	bt = Thread(target=passwordBlinking, args = (blinkStopEvent,))
 	currentInput = -1
 	bt.start()
+
+def playsound(sound):
+	t = Thread(target=playsoundthread, args = (sound,))
+	t.start()
+
+def playsoundthread(sound):
+	global playing
+	while(playing):
+		time.sleep(0.1)
+	playing = True
+	os.system('mpg321 -g 200 '+sound+'.mp3')
+	playing = False
 
 def endPasswordInput():
 	global pushAction
