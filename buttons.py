@@ -4,6 +4,7 @@ from threading import Thread
 from threading import Event
 import os
 from random import randint
+import datetime as dt
 
 
 #REDLEDS = [21,26,19,6]
@@ -18,8 +19,11 @@ PASSWORTSETPIN = 10
 DOOROPENPIN = 9
 OPENLED = 11
 
-NOPASSSOUNDS = 4
-PASSSOUNDS = 3
+MORNINGHOUR = 7
+EVENINGHOUR = 22
+
+NOPASSSOUNDS = 8
+PASSSOUNDS = 5
 
 OPENLEDLIGHTTIME = 300
 
@@ -147,9 +151,7 @@ def normalPush(input):
 	global tries
 	tries = tries + 1
 	print tries
-	if tries == 10:
-		playsound("nopass"+str(randint(1,NOPASSSOUNDS)))
-		tries = 0
+
 
 	global lastCode, lastInputTime
 	GPIO.output(OPENLED, GPIO.HIGH)
@@ -168,6 +170,9 @@ def normalPush(input):
 		if lastCode[-5:]==correctCode and not open:
 			actSuccess()
 			lastCode = []
+		if tries == 5 and not lastCode[-5:]==correctCode:
+			playsound("nopass"+str(randint(1,NOPASSSOUNDS)))
+			tries = 0
 
 def actSuccess():
 	global tries
@@ -275,15 +280,18 @@ def startPasswordInput():
 	bt.start()
 
 def playsound(sound):
-	t = Thread(target=playsoundthread, args = (sound,))
-	t.start()
+	Hour = dt.datetime.today().hour
+	if Hour >=MORNINGHOUR and Hour<EVENINGHOUR:
+		t = Thread(target=playsoundthread, args = (sound,))
+		t.start()
 
 def playsoundthread(sound):
 	global playing
 	while(playing):
 		time.sleep(0.1)
 	playing = True
-	os.system('mpg321 -g 200 '+sound+'.mp3')
+	#os.system('mpg321 -g 200 '+sound+'.mp3')
+	os.system('mplayer '+sound+'.mp3')
 	playing = False
 
 def endPasswordInput():
