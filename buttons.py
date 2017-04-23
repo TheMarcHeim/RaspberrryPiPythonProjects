@@ -23,7 +23,10 @@ MORNINGHOUR = 7
 EVENINGHOUR = 22
 
 NOPASSSOUNDS = 8
-PASSSOUNDS = 5
+PASSSOUNDS = 1
+OPENSOUNDS = 5
+
+RESETTIME = 60
 
 OPENLEDLIGHTTIME = 300
 
@@ -144,6 +147,7 @@ def buttonThread():
 				time.sleep(0.2)
 			i=i+1
 		setOpenLed()
+		setReset()
 
 
 def normalPush(input):
@@ -160,7 +164,7 @@ def normalPush(input):
 		startPasswordInput()
 		print "passwordinput"
 	elif input == 6:
-		actSuccess()
+		actOpen()
 	else:
 		if not open:
 			lastCode=lastCode[-4:]+[input]
@@ -170,16 +174,22 @@ def normalPush(input):
 		if lastCode[-5:]==correctCode and not open:
 			actSuccess()
 			lastCode = []
+			tries = 0
 		if tries == 5 and not lastCode[-5:]==correctCode:
 			playsound("nopass"+str(randint(1,NOPASSSOUNDS)))
 			tries = 0
 
 def actSuccess():
+	Thread(target=successRelay).start()
+	Thread(target=ledSucces).start()
+	playsound("pass"+str(randint(1,PASSSOUNDS)))
+
+def actOpen():
 	global tries
 	tries = 0
 	Thread(target=successRelay).start()
 	Thread(target=ledSucces).start()
-	playsound("pass"+str(randint(1,PASSSOUNDS)))
+	playsound("open"+str(randint(1,OPENSOUNDS)))
 	
 
 def inputActivationThread(led):
@@ -322,6 +332,13 @@ def setOpenLed():
 		GPIO.output(OPENLED, GPIO.LOW)
 	else:
 		GPIO.output(OPENLED, GPIO.HIGH)
+
+def setReset():
+	global lastCode, tries
+	if tries > 0 and time.time()-lastInputTime >= RESETTIME:
+		print "Reset after timeout..."
+		lastCode = []
+		tries = 0
 
 def run():
 	global pushAction, lastInputTime
